@@ -612,13 +612,6 @@ Les paquets multicast restent limités au périmètre réseau prévu.
 
 L'architecture peut être représentée sous la forme suivante :
 
-```text
-src/
-├── main.rs
-├── multicast.rs
-├── history.rs
-└── crypto.rs
-```
 
 ### `main.rs`
 

@@ -1068,18 +1068,6 @@ Une règle importante :
 
 # 30. Organisation du code Rust
 
-Une organisation simple :
-
-```text
-src/
-├── main.rs
-├── multicast.rs
-├── history.rs
-└── crypto.rs
-```
-
-Pour une architecture plus évolutive :
-
 ```text
 src/
 ├── main.rs
