@@ -1,9 +1,16 @@
+mod app;
+mod erreur;
+mod history;
+mod models;
 mod network;
 mod security;
-mod history;
-mod app;
-mod models;
+use crate::erreur::ChatErreur;
 
-fn main(){
+use crate::network::{recever, sender};
 
+#[tokio::main]
+async fn main() -> Result<(), ChatErreur> {
+    recever::recerver().await?;
+    sender::sender().await?;
+    Ok(())
 }
