@@ -797,7 +797,137 @@ Cette approche permet d'éviter de simplement écrire du code fonctionnalité pa
 
 ---
 
-# 17. Conclusion
+# 17. Installation
+
+### Prérequis
+
+* **Rust** (edition 2024) — installer via [rustup](https://rustup.rs/) :
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+* Un système Linux (multicast UDP, `socket2` avec `set_reuse_port`)
+* Les machines doivent être connectées au **même réseau local**
+
+### Cloner le projet
+
+```bash
+git clone <url-du-depot>
+cd chat
+```
+
+### Compiler
+
+```bash
+cargo build --release
+```
+
+Le binaire est généré dans `target/release/chat`.
+
+---
+
+# 18. Utilisation
+
+### Lancement simple
+
+```bash
+cargo run -- <pseudo>
+```
+
+Exemple :
+
+```bash
+cargo run -- Alice
+```
+
+L'application démarre, rejoint le groupe multicast et affiche :
+
+```text
+Bienvenue Alice! Tapez /help pour les commandes.
+```
+
+### Lancement avec chiffrement
+
+Pour chiffrer les messages avec AES-256-GCM, fournir une clé hexadécimale de 64 caractères (32 octets) via `--key` :
+
+```bash
+cargo run -- Alice --key 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+> Toutes les instances doivent utiliser la **même clé** pour pouvoir se déchiffrer mutuellement.
+
+### Commandes disponibles
+
+| Commande | Description |
+|----------|-------------|
+| `/help` | Afficher la liste des commandes |
+| `/history` | Afficher les 20 derniers messages |
+| `/quit` | Quitter le chat (envoie un message de départ) |
+
+### Exemple de session
+
+```text
+$ cargo run -- Alice
+Bienvenue Alice! Tapez /help pour les commandes.
+> Bonjour tout le monde !
+> Comment allez-vous ?
+> /history
+--- Historique (2 messages) ---
+[14:23:45] Alice : Bonjour tout le monde !
+[14:23:48] Alice : Comment allez-vous ?
+--- Fin de l'historique ---
+> /quit
+Au revoir!
+```
+
+### Tester entre plusieurs machines
+
+1. Compiler le projet sur chaque machine du réseau local
+2. Lancer l'application avec un pseudo différent sur chaque machine
+3. Les messages envoyés par une machine sont reçues par toutes les autres
+
+```text
+Machine A : cargo run -- Alice
+Machine B : cargo run -- Bob
+Machine C : cargo run -- Charlie
+```
+
+Les messages s'affichent automatiquement sur chaque machine participante.
+
+---
+
+# 19. Tests
+
+### Lancer tous les tests
+
+```bash
+cargo test
+```
+
+### Résultat attendu
+
+```text
+running 65 tests
+...
+test result: ok. 65 passed; 0 failed; 0 ignored
+```
+
+### Types de tests
+
+| Catégorie | Nombre | Description |
+|-----------|--------|-------------|
+| Unitaires `models` | 10 | Sérialisation/désérialisation JSON |
+| Unitaires `security` | 11 | Chiffrement/déchiffrement AES-256-GCM |
+| Unitaires `history` | 9 | Logique en mémoire, limite 100 messages |
+| Unitaires `ui` | 6 | Affichage terminal |
+| Intégration `history` | 9 | Persistance fichier (tempfile) |
+| Intégration `network` | 7 | Envoi/réception UDP réel |
+| Intégration `security` | 9 | Bout en bout chiffrement + protocole |
+
+---
+
+# 20. Conclusion
 
 Ce projet constitue une implémentation concrète d'un système de communication distribué fonctionnant sur un réseau local.
 

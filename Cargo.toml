@@ -10,3 +10,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 tokio = { version = "1.53.1", features = ["full"] }
 thiserror = "2.0.20"
+aes-gcm = "0.10"
+socket2 = { version = "0.5", features = ["all"] }
+hex = "0.4"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3"

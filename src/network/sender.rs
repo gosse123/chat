@@ -1,32 +1,43 @@
-use std::net::Ipv4Addr;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
 use tokio::net::UdpSocket;
-use tokio::time::{Duration, sleep};
 
 use crate::erreur::ChatErreur;
+use crate::models::message::NetworkMessage;
+use crate::security::CryptoEngine;
 
-pub async fn sender() -> Result<(), ChatErreur> {
-    let multicast_addr: Ipv4Addr = "239.0.0.1".parse()?;
-    let port = 6000;
-    let target = (multicast_addr, port);
+pub struct MulticastSender {
+    socket: Arc<UdpSocket>,
+    addr: SocketAddr,
+    crypto: Option<Arc<CryptoEngine>>,
+}
 
-    // Se lier à un port aléatoire disponible pour envoyer
-    let socket = UdpSocket::bind("0.0.0.0:0").await?;
-    println!(
-        "🚀 Émetteur prêt. Envoi de messages vers {}...",
-        multicast_addr
-    );
+impl MulticastSender {
+    pub fn new(
+        socket: Arc<UdpSocket>,
+        addr: SocketAddr,
+        crypto: Option<Arc<CryptoEngine>>,
+    ) -> Self {
+        Self {
+            socket,
+            addr,
+            crypto,
+        }
+    }
 
-    let mut compteur = 1;
+    pub async fn send(&self, data: &[u8]) -> Result<(), ChatErreur> {
+        self.socket.send_to(data, self.addr).await?;
+        Ok(())
+    }
 
-    loop {
-        let message = format!("Message multicast asynchrone numéro {}", compteur);
-
-        // Envoi du message au groupe
-        socket.send_to(message.as_bytes(), target).await?;
-        println!("📤 Envoyé : {}", message);
-
-        compteur += 1;
-        // Attendre 2 secondes avant le prochain envoi
-        sleep(Duration::from_secs(2)).await;
+    pub async fn send_message(&self, msg: &NetworkMessage) -> Result<(), ChatErreur> {
+        let json = serde_json::to_vec(msg)?;
+        let data = if let Some(ref crypto) = self.crypto {
+            crypto.encrypt(&json)?
+        } else {
+            json
+        };
+        self.send(&data).await
     }
 }

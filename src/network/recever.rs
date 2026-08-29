@@ -1,28 +1,46 @@
-use crate::erreur::ChatErreur;
-use std::net::Ipv4Addr;
+use std::sync::Arc;
+
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc;
 
-pub async fn recerver() -> Result<(), ChatErreur> {
-    let multicast_addr: Ipv4Addr = "239.0.0.1".parse()?;
-    let port = 6000;
+use crate::models::message::NetworkMessage;
+use crate::security::CryptoEngine;
 
-    // Écouter sur toutes les interfaces locales sur le port 6000
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", port)).await?;
-    println!("📡 Récepteur démarré sur le port {}...", port);
-
-    // Rejoindre le club privé (groupe multicast)
-    socket.join_multicast_v4(multicast_addr, Ipv4Addr::UNSPECIFIED)?;
-    println!(
-        "👥 Groupe multicast {} rejoint avec succès.",
-        multicast_addr
-    );
-
-    let mut buf = [0u8; 1024];
-
-    // Boucle infinie pour recevoir les messages de manière asynchrone
+pub async fn receiver_loop(
+    socket: Arc<UdpSocket>,
+    crypto: Option<Arc<CryptoEngine>>,
+    tx: mpsc::Sender<NetworkMessage>,
+) {
+    let mut buf = [0u8; 65535];
     loop {
-        let (len, addr) = socket.recv_from(&mut buf).await?;
-        let message = String::from_utf8_lossy(&buf[..len]);
-        println!("📩 Reçu de {}: {}", addr, message);
+        match socket.recv_from(&mut buf).await {
+            Ok((len, _addr)) => {
+                let data = &buf[..len];
+                let plaintext = if let Some(ref crypto) = crypto {
+                    match crypto.decrypt(data) {
+                        Ok(pt) => pt,
+                        Err(e) => {
+                            eprintln!("Erreur de déchiffrement: {}", e);
+                            continue;
+                        }
+                    }
+                } else {
+                    data.to_vec()
+                };
+                match serde_json::from_slice::<NetworkMessage>(&plaintext) {
+                    Ok(msg) => {
+                        if tx.send(msg).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Erreur de désérialisation: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Erreur de réception: {}", e);
+            }
+        }
     }
 }
