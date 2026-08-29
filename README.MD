@@ -813,7 +813,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ### Cloner le projet
 
 ```bash
-git clone <url-du-depot>
+git clone https://github.com/gosse123/chat.git
 cd chat
 ```
 
